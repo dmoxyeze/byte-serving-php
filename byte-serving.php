@@ -69,6 +69,25 @@
    }
  }
 
+   public function getFileInfo($url)
+    {
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        // Only header
+        curl_setopt($curl, CURLOPT_NOBODY, true);
+        curl_setopt($curl, CURLOPT_HEADER, true);
+        // Do not print anything to output
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+        // get last modified date
+        curl_setopt($curl, CURLOPT_FILETIME, true);
+
+        $result = curl_exec($curl);
+        // Get info
+        $info = curl_getinfo($curl);
+        return $info;
+    }
+
  function byteserve_buffered_read($file, $bytes, $buffer_size=1024)
  {
    # Outputs up to $bytes from the file $file to standard output, $buffer_size bytes at a time.
@@ -90,6 +109,20 @@
    // 2019-08-22: added by DannyNiu/NJF.
    // Indicating potentially cacheable results.
    clearstatcache();
+   // check if filename is a path or a  link
+   if(file_exists($filename)) {
+    // it is a path
+    $mt = stat($filename)['mtime'];
+    $filesize = filesize($filename);
+     $mimetype = mime_content_type($filename);
+   }else{
+    $info = $this->getFileInfo($filename);
+    $mt = $info['filetime'];
+    // $filesize = filesize($filename);
+     $filesize = $info['download_content_length'];
+     // $mimetype = mime_content_type($filename);
+     $mimetype = $info['content_type'];
+   }
    $mt = stat($filename)['mtime'];
    header("Last-Modified: ".gmdate("D, d M Y H:i:s", $mt)." GMT");
    header("Cache-Control: public, max-age=3600");
@@ -120,8 +153,8 @@
        die(); // [diff-exit-die]
      }
 
-     $filesize = filesize($filename);
-     $mimetype = mime_content_type($filename);
+     //$filesize = filesize($filename);
+     //$mimetype = mime_content_type($filename);
    }
 
    $file = fopen($filename, "rb");
